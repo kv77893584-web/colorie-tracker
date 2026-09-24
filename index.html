@@ -14,16 +14,26 @@
     --protein:#3D6DB5; --fat:#D99A1E; --carbs:#4E9A5B; --over:#C0412B; --btn:#1D2621; --btn-ink:#FFFFFF;
     --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200' fill='none' stroke='%23D8E2DB' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='44' cy='46' r='20'/%3E%3Ccircle cx='44' cy='46' r='11'/%3E%3Cpath d='M136 28c20 0 28 13 28 28-17 0-28-11-28-28z'/%3E%3Cpath d='M136 28l22 22'/%3E%3Cpath d='M46 132c-10 0-17 8-17 19s8 21 17 21c3 0 5-2 8-2s5 2 8 2c9 0 17-10 17-21s-7-19-17-19c-3 0-5 2-8 2s-5-2-8-2z'/%3E%3Cpath d='M54 132c0-6 3-10 8-12'/%3E%3Cpath d='M146 118v50M139 118v15a7 7 0 0014 0v-15'/%3E%3Ccircle cx='100' cy='100' r='2.5' fill='%23D8E2DB' stroke='none'/%3E%3Ccircle cx='182' cy='182' r='2.5' fill='%23D8E2DB' stroke='none'/%3E%3Ccircle cx='96' cy='186' r='2' fill='%23D8E2DB' stroke='none'/%3E%3C/svg%3E");
     --glow:rgba(78,154,91,.14);
+    color-scheme:light;
   }
   @media (prefers-color-scheme: dark){
-    :root{
+    :root:not([data-theme="light"]){
       --bg:#131815; --surface:#1C231F; --ink:#E7EDE9; --sub:#95A39A; --line:#2C3530;
       --protein:#6F9BE0; --fat:#EDB74A; --carbs:#79C386; --over:#EA7A63; --btn:#E7EDE9; --btn-ink:#131815;
       --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200' fill='none' stroke='%23243029' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='44' cy='46' r='20'/%3E%3Ccircle cx='44' cy='46' r='11'/%3E%3Cpath d='M136 28c20 0 28 13 28 28-17 0-28-11-28-28z'/%3E%3Cpath d='M136 28l22 22'/%3E%3Cpath d='M46 132c-10 0-17 8-17 19s8 21 17 21c3 0 5-2 8-2s5 2 8 2c9 0 17-10 17-21s-7-19-17-19c-3 0-5 2-8 2s-5-2-8-2z'/%3E%3Cpath d='M54 132c0-6 3-10 8-12'/%3E%3Cpath d='M146 118v50M139 118v15a7 7 0 0014 0v-15'/%3E%3Ccircle cx='100' cy='100' r='2.5' fill='%23243029' stroke='none'/%3E%3Ccircle cx='182' cy='182' r='2.5' fill='%23243029' stroke='none'/%3E%3Ccircle cx='96' cy='186' r='2' fill='%23243029' stroke='none'/%3E%3C/svg%3E");
       --glow:rgba(121,195,134,.10);
+      color-scheme:dark;
     }
   }
+  :root[data-theme="dark"]{
+    --bg:#131815; --surface:#1C231F; --ink:#E7EDE9; --sub:#95A39A; --line:#2C3530;
+    --protein:#6F9BE0; --fat:#EDB74A; --carbs:#79C386; --over:#EA7A63; --btn:#E7EDE9; --btn-ink:#131815;
+    --pattern:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200' fill='none' stroke='%23243029' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='44' cy='46' r='20'/%3E%3Ccircle cx='44' cy='46' r='11'/%3E%3Cpath d='M136 28c20 0 28 13 28 28-17 0-28-11-28-28z'/%3E%3Cpath d='M136 28l22 22'/%3E%3Cpath d='M46 132c-10 0-17 8-17 19s8 21 17 21c3 0 5-2 8-2s5 2 8 2c9 0 17-10 17-21s-7-19-17-19c-3 0-5 2-8 2s-5-2-8-2z'/%3E%3Cpath d='M54 132c0-6 3-10 8-12'/%3E%3Cpath d='M146 118v50M139 118v15a7 7 0 0014 0v-15'/%3E%3Ccircle cx='100' cy='100' r='2.5' fill='%23243029' stroke='none'/%3E%3Ccircle cx='182' cy='182' r='2.5' fill='%23243029' stroke='none'/%3E%3Ccircle cx='96' cy='186' r='2' fill='%23243029' stroke='none'/%3E%3C/svg%3E");
+    --glow:rgba(121,195,134,.10);
+    color-scheme:dark;
+  }
   *{box-sizing:border-box}
+  [hidden]{display:none!important}
   html,body{margin:0}
   body{
     background-color:var(--bg); color:var(--ink); min-height:100vh;
@@ -97,7 +107,47 @@
   .snap-row img{width:64px;height:64px;object-fit:cover;border-radius:10px;flex-shrink:0}
   .snap-status{font-size:15px}
   .snap-status.err{color:var(--over)}
-  .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .hero-top{align-items:center}
+  .hero-title{font-size:20px;font-weight:500}
+  .hero-tools{display:flex;align-items:center;gap:8px}
+  .theme-btn{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);background:var(--surface);
+    font-size:18px;line-height:1;cursor:pointer;flex-shrink:0}
+  .stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .stat{background:var(--surface);border-radius:16px;padding:14px 16px}
+  .stat.main{background:var(--btn);color:var(--btn-ink)}
+  .stat-label{display:block;font-size:15px;color:var(--sub)}
+  .stat.main .stat-label,.stat.main .stat-unit{color:inherit;opacity:.75}
+  .stat-num{display:block;font-size:clamp(36px,11vw,54px);font-weight:700;line-height:1.05;letter-spacing:-1px;margin:2px 0}
+  .stat-unit{font-size:14px;color:var(--sub)}
+  .stat.over .stat-num,.stat.over .stat-label{color:var(--over);opacity:1}
+
+  .sec-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+  .sec-head h2{margin:0}
+  .link-btn{background:none;border:1px solid var(--line);color:var(--ink);border-radius:8px;padding:5px 10px;
+    font:inherit;font-size:14px;cursor:pointer}
+  .meal-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;gap:6px 8px;align-items:center;
+    padding:10px 0;border-top:1px solid var(--line)}
+  .meal-row:first-child{border-top:none;padding-top:2px}
+  .meal-row .m-name{grid-row:1;grid-column:1 / 4}
+  .meal-row .m-from{grid-row:2;grid-column:1}
+  .meal-row .dash{grid-row:2;grid-column:2}
+  .meal-row .m-to{grid-row:2;grid-column:3}
+  .meal-row .del{grid-row:1;grid-column:4}
+  .meal-row input[type=time]{width:100%}
+  .meal-row input,.stop-row input{padding:8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);
+    color:var(--ink);font:inherit;font-size:15px;min-width:0}
+  .stop-row input[type=time]{width:120px}
+  .dash{color:var(--sub)}
+  .add-meal{background:none;border:1px dashed var(--line);color:var(--sub);border-radius:8px;padding:9px;width:100%;
+    font:inherit;font-size:14px;cursor:pointer}
+  .stop-row{display:flex;align-items:center;gap:8px;margin:12px 0 4px;flex-wrap:wrap;font-size:15px}
+  .meals-note{font-size:13px;color:var(--sub);margin:6px 0 0}
+  .meals-actions{display:flex;gap:8px;margin-top:12px}
+  .meals-actions .primary{margin-top:0;flex:1}
+  .ghost{flex:1;padding:12px;border-radius:10px;border:1px solid var(--line);background:none;color:var(--ink);
+    font:inherit;font-size:16px;cursor:pointer}
+  .err-text{color:var(--over);font-size:14px;margin-top:8px}
+  .slots{display:grid;grid-template-columns:repeat(auto-fit,minmax(72px,1fr));gap:6px}
   .slot{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;font-size:13px;color:var(--sub)}
   .slot b{display:block;color:var(--ink);font-weight:500;font-size:14px}
   .slot.now{border-color:var(--ink);background:var(--bg)}
@@ -123,13 +173,25 @@
   <div id="app" hidden>
     <div class="hero">
       <div class="hero-top">
-        <div>
-          <div class="left-big num" id="leftBig">—</div>
-          <div class="left-cap" id="leftCap">ккал осталось на сегодня</div>
+        <div class="hero-title">Сегодня</div>
+        <div class="hero-tools">
+          <label class="goal-box" for="goalInput">Норма
+            <input type="number" id="goalInput" min="0" inputmode="numeric" class="num">
+          </label>
+          <button type="button" class="theme-btn" id="themeBtn" aria-label="Сменить тему">🌙</button>
         </div>
-        <label class="goal-box" for="goalInput">Норма
-          <input type="number" id="goalInput" min="0" inputmode="numeric" class="num">
-        </label>
+      </div>
+      <div class="stats">
+        <div class="stat main">
+          <span class="stat-label">Съедено</span>
+          <b class="stat-num num" id="eatenBig">0</b>
+          <span class="stat-unit">ккал</span>
+        </div>
+        <div class="stat" id="leftStat">
+          <span class="stat-label" id="leftLabel">Осталось</span>
+          <b class="stat-num num" id="leftBig">0</b>
+          <span class="stat-unit">ккал из <span id="goalCap" class="num">2000</span></span>
+        </div>
       </div>
       <div class="kcal-track"><div class="kcal-fill" id="kcalFill" style="width:0"></div></div>
       <div class="macro-bar" id="macroBar" aria-hidden="true">
@@ -178,9 +240,13 @@
     </section>
 
     <section>
-      <h2>Режим питания</h2>
+      <div class="sec-head">
+        <h2>Режим питания</h2>
+        <button type="button" class="link-btn" id="mealsEdit">Изменить</button>
+      </div>
       <div class="slots" id="slots"></div>
       <div class="slot-status" id="slotStatus"></div>
+      <div id="mealsForm" hidden></div>
     </section>
 
     <section>
@@ -204,6 +270,28 @@
 
   var tg = window.Telegram && window.Telegram.WebApp;
   if (tg) { try { tg.ready(); tg.expand(); } catch(e){} }
+  // ---------- тема ----------
+  var root = document.documentElement, themeBtn = document.getElementById("themeBtn");
+  function savedTheme(){ try { return localStorage.getItem("theme"); } catch(e){ return null; } }
+  function applyTheme(t, remember){
+    root.setAttribute("data-theme", t);
+    if (themeBtn){
+      themeBtn.textContent = t === "dark" ? "☀️" : "🌙";
+      themeBtn.setAttribute("aria-label", t === "dark" ? "Включить светлую тему" : "Включить тёмную тему");
+    }
+    if (remember){ try { localStorage.setItem("theme", t); } catch(e){} }
+    if (tg){
+      var bg = getComputedStyle(root).getPropertyValue("--bg").trim();
+      try { tg.setBackgroundColor(bg); tg.setHeaderColor(bg); } catch(e){}
+    }
+  }
+  var startTheme = savedTheme() || (tg && tg.colorScheme) ||
+    (window.matchMedia && matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  applyTheme(startTheme === "dark" ? "dark" : "light", false);
+  if (themeBtn) themeBtn.addEventListener("click", function(){
+    applyTheme(root.getAttribute("data-theme") === "dark" ? "light" : "dark", true);
+  });
+
   var tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
   var uid = (tgUser && tgUser.id) || new URLSearchParams(location.search).get("uid");
   uid = uid ? String(uid).replace(/[^0-9]/g, "") : "";
@@ -242,11 +330,13 @@
     var today = localDay();
     var weekAgo = localDay(new Date(Date.now() - 7 * 864e5));
     return Promise.all([
-      sb("GET", "/users?user_id=eq." + uid + "&select=goal"),
+      sb("GET", "/users?user_id=eq." + uid + "&select=goal,meals"),
       sb("GET", "/entries?user_id=eq." + uid + "&day=eq." + today + "&order=id.asc"),
       sb("GET", "/entries?user_id=eq." + uid + "&day=gte." + weekAgo + "&day=lt." + today + "&select=day,calories")
     ]).then(function(res){
       goal = res[0] && res[0].length ? num(res[0][0].goal) : 2000;
+      var m = res[0] && res[0].length ? res[0][0].meals : null;
+      if (m && Array.isArray(m.items) && !mealsEditing) meals = m;
       entries = res[1] || [];
       hist = res[2] || [];
       render();
@@ -262,11 +352,11 @@
 
     if (document.activeElement !== $("goalInput")) $("goalInput").value = goal;
     var left = goal - k;
+    $("eatenBig").textContent = k;
     $("leftBig").textContent = Math.abs(left);
-    $("leftBig").className = "left-big num" + (left < 0 ? " over" : "");
-    $("leftCap").textContent = left < 0
-      ? "ккал сверх нормы · съедено " + k + " из " + goal
-      : "ккал осталось · съедено " + k + " из " + goal;
+    $("leftLabel").textContent = left < 0 ? "Сверх нормы" : "Осталось";
+    $("leftStat").className = "stat" + (left < 0 ? " over" : "");
+    $("goalCap").textContent = goal;
     $("kcalFill").style.width = (goal > 0 ? Math.min(100, k / goal * 100) : 0) + "%";
     $("kcalFill").className = "kcal-fill" + (left < 0 ? " over" : "");
 
@@ -321,26 +411,108 @@
     renderWeek();
   }
 
-  var SLOTS = [
-    { name: "Завтрак", from: 7, to: 10 },
-    { name: "Обед", from: 12, to: 15 },
-    { name: "Ужин", from: 18, to: 20 },
-    { name: "Не есть", from: 21, to: 24 }
-  ];
+  var DEFAULT_MEALS = { items: [
+    { name: "Завтрак", from: "07:00", to: "10:00" },
+    { name: "Обед", from: "12:00", to: "15:00" },
+    { name: "Ужин", from: "18:00", to: "20:00" }
+  ], stopAfter: "21:00" };
+  var meals = JSON.parse(JSON.stringify(DEFAULT_MEALS)), mealsEditing = false, draft = null;
+
+  function toMin(t){ var m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? Number(m[1]) * 60 + Number(m[2]) : NaN; }
+  function el(tag, cls, text){ var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
+
   function renderSlots(){
-    var now = new Date(), h = now.getHours() + now.getMinutes() / 60, active = null;
     var box = $("slots"); box.innerHTML = "";
-    SLOTS.forEach(function(s, i){
-      var on = h >= s.from && h < s.to; if (on) active = i;
-      var d = document.createElement("div"); d.className = "slot" + (on ? " now" : "");
-      var b = document.createElement("b"); b.textContent = s.name;
-      d.appendChild(b); d.appendChild(document.createTextNode(s.from + ":00–" + s.to + ":00"));
+    var now = new Date(), nowMin = now.getHours() * 60 + now.getMinutes(), active = null;
+    meals.items.forEach(function(s){
+      var a = toMin(s.from), b = toMin(s.to);
+      var on = nowMin >= a && (b > a ? nowMin < b : true);
+      if (on && !active) active = s;
+      var d = el("div", "slot" + (on ? " now" : ""));
+      d.appendChild(el("b", "", s.name));
+      d.appendChild(document.createTextNode(s.from + "–" + s.to));
       box.appendChild(d);
     });
-    $("slotStatus").textContent = active === null ? "Сейчас не время приёма пищи."
-      : active === 3 ? "Поздно: по плану сегодня больше не едим."
-      : "Сейчас время: " + SLOTS[active].name.toLowerCase() + ".";
+    var stopOn = false;
+    if (meals.stopAfter){
+      stopOn = nowMin >= toMin(meals.stopAfter);
+      var d = el("div", "slot" + (stopOn && !active ? " now" : ""));
+      d.appendChild(el("b", "", "Не есть"));
+      d.appendChild(document.createTextNode("после " + meals.stopAfter));
+      box.appendChild(d);
+    }
+    $("slotStatus").textContent = active ? "Сейчас время: " + active.name.toLowerCase() + "."
+      : stopOn ? "Поздно: по плану сегодня больше не едим."
+      : "Сейчас не время приёма пищи.";
   }
+
+  function setMealsEditing(on){
+    mealsEditing = on;
+    $("slots").hidden = on; $("slotStatus").hidden = on; $("mealsEdit").hidden = on;
+    $("mealsForm").hidden = !on;
+    if (on){ draft = JSON.parse(JSON.stringify(meals)); renderMealsForm(); }
+    else { draft = null; $("mealsForm").innerHTML = ""; renderSlots(); }
+  }
+
+  function timeInput(value, label, onChange){
+    var i = document.createElement("input"); i.type = "time"; i.value = value || "";
+    i.setAttribute("aria-label", label);
+    i.addEventListener("input", function(){ onChange(this.value); });
+    return i;
+  }
+
+  function renderMealsForm(){
+    var f = $("mealsForm"); f.innerHTML = "";
+    draft.items.forEach(function(it, i){
+      var row = el("div", "meal-row");
+      var name = document.createElement("input"); name.type = "text"; name.value = it.name; name.placeholder = "Название";
+      name.className = "m-name";
+      name.setAttribute("aria-label", "Название приёма пищи");
+      name.addEventListener("input", function(){ it.name = this.value; });
+      var del = el("button", "del", "×"); del.type = "button";
+      del.setAttribute("aria-label", "Убрать " + (it.name || "приём пищи"));
+      del.addEventListener("click", function(){ draft.items.splice(i, 1); renderMealsForm(); });
+      row.appendChild(name);
+      var tf = timeInput(it.from, "Начало", function(v){ it.from = v; }); tf.className = "m-from";
+      var tt = timeInput(it.to, "Конец", function(v){ it.to = v; }); tt.className = "m-to";
+      row.appendChild(tf);
+      row.appendChild(el("span", "dash", "–"));
+      row.appendChild(tt);
+      row.appendChild(del);
+      f.appendChild(row);
+    });
+    var add = el("button", "add-meal", "+ Добавить приём пищи"); add.type = "button";
+    add.addEventListener("click", function(){ draft.items.push({ name: "Перекус", from: "16:00", to: "16:30" }); renderMealsForm(); });
+    f.appendChild(add);
+
+    var stop = el("div", "stop-row");
+    stop.appendChild(el("span", "", "Не есть после"));
+    stop.appendChild(timeInput(draft.stopAfter, "Не есть после", function(v){ draft.stopAfter = v || null; }));
+    f.appendChild(stop);
+    f.appendChild(el("p", "meals-note", "Оставь пустым, если ограничение не нужно. Бот напомнит в начале каждого приёма пищи."));
+
+    var err = el("div", "err-text"); err.id = "mealsErr"; err.hidden = true; f.appendChild(err);
+    var actions = el("div", "meals-actions");
+    var save = el("button", "primary", "Сохранить"); save.type = "button"; save.addEventListener("click", saveMeals);
+    var cancel = el("button", "ghost", "Отмена"); cancel.type = "button";
+    cancel.addEventListener("click", function(){ setMealsEditing(false); });
+    actions.appendChild(save); actions.appendChild(cancel);
+    f.appendChild(actions);
+  }
+
+  function saveMeals(){
+    var items = draft.items.map(function(it){ return { name: (it.name || "").trim(), from: it.from, to: it.to }; });
+    var bad = items.some(function(it){ return !it.name || isNaN(toMin(it.from)) || isNaN(toMin(it.to)); });
+    if (bad){ $("mealsErr").hidden = false; $("mealsErr").textContent = "Заполни название и время у каждого приёма пищи."; return; }
+    items.sort(function(a, b){ return toMin(a.from) - toMin(b.from); });
+    meals = { items: items, stopAfter: draft.stopAfter && !isNaN(toMin(draft.stopAfter)) ? draft.stopAfter : null };
+    setMealsEditing(false);
+    sb("POST", "/users", { user_id: Number(uid), goal: goal, meals: meals }, "resolution=merge-duplicates,return=minimal")
+      .then(function(){ setStatus("Режим питания сохранён. Бот будет напоминать по новому времени."); })
+      .catch(function(){ setStatus("Не удалось сохранить режим питания. Проверь интернет.", true); });
+  }
+
+  $("mealsEdit").addEventListener("click", function(){ setMealsEditing(true); });
 
   function renderWeek(){
     var totals = {};
@@ -473,8 +645,8 @@
     });
   });
 
-  document.addEventListener("visibilitychange", function(){ if (!document.hidden && editingId === null) load(); });
-  setInterval(function(){ if (!document.hidden && editingId === null) load(); }, 20000);
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden && editingId === null && !mealsEditing) load(); });
+  setInterval(function(){ if (!document.hidden && editingId === null && !mealsEditing) load(); }, 20000);
   load();
 })();
 </script>
