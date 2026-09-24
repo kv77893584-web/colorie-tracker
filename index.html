@@ -3,255 +3,347 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Счётчик калорий</title>
+<title>100kg — дневник питания</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#F7F5EF; --panel:#FFFFFF; --ink:#28322B; --sub:#6B7A6F;
-    --accent:#4F7A5C; --accent-soft:#DCEAE0; --warn:#C9622B; --line:#E4E0D5;
-    --danger:#B3402F;
-    box-sizing:border-box;
-    padding-top:env(safe-area-inset-top,0px);
-    padding-bottom:env(safe-area-inset-bottom,0px);
+    --bg:#EEF2EF; --surface:#FFFFFF; --ink:#1D2621; --sub:#66736B; --line:#DCE3DE;
+    --protein:#3D6DB5; --fat:#D99A1E; --carbs:#4E9A5B; --over:#C0412B; --btn:#1D2621; --btn-ink:#FFFFFF;
   }
   @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#1B1F1C; --panel:#242923; --ink:#EDEFE9; --sub:#9BAA9E;
-      --accent:#7FB08F; --accent-soft:#2E3A31; --line:#333A32; --warn:#E08A54; --danger:#E37F6C;
+    :root{
+      --bg:#131815; --surface:#1C231F; --ink:#E7EDE9; --sub:#95A39A; --line:#2C3530;
+      --protein:#6F9BE0; --fat:#EDB74A; --carbs:#79C386; --over:#EA7A63; --btn:#E7EDE9; --btn-ink:#131815;
     }
   }
-  :root[data-theme="dark"]{
-    --bg:#1B1F1C; --panel:#242923; --ink:#EDEFE9; --sub:#9BAA9E;
-    --accent:#7FB08F; --accent-soft:#2E3A31; --line:#333A32; --warn:#E08A54; --danger:#E37F6C;
-  }
   *{box-sizing:border-box}
-  html{scroll-padding-top:env(safe-area-inset-top,0px);}
-  html,body{height:100%;}
+  html,body{margin:0}
   body{
-    margin:0; background:var(--bg); color:var(--ink);
-    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
-    -webkit-font-smoothing:antialiased;
+    background:var(--bg); color:var(--ink);
+    font-family:"Rubik",-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-size:16px; line-height:1.45; -webkit-font-smoothing:antialiased;
   }
-  .wrap{max-width:520px;margin:0 auto;padding:28px 18px 60px;}
-  h1{font-size:22px;font-weight:700;margin:0 0 4px;letter-spacing:-.2px;}
-  .sub{color:var(--sub);font-size:14px;margin:0 0 22px;}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-bottom:16px;}
-  .row{display:flex;align-items:center;justify-content:space-between;gap:10px;}
-  .goal-input{display:flex;align-items:center;gap:8px;}
-  .goal-input input{width:90px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px;}
-  .progress-num{font-size:38px;font-weight:700;line-height:1;}
-  .progress-label{color:var(--sub);font-size:13px;margin-top:4px;}
-  .bar{height:10px;border-radius:6px;background:var(--accent-soft);overflow:hidden;margin-top:14px;}
-  .bar-fill{height:100%;background:var(--accent);border-radius:6px;transition:width .3s ease;}
-  .bar-fill.over{background:var(--danger);}
-  form.add{display:flex;gap:8px;margin-top:4px;}
-  form.add input{flex:1;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:15px;min-width:0;}
-  form.add input.cal{flex:0 0 90px;}
-  form.add button{padding:10px 16px;border-radius:8px;border:none;background:var(--accent);color:#fff;font-size:15px;font-weight:600;cursor:pointer;}
-  form.add button:active{opacity:.85;}
-  ul.log{list-style:none;margin:14px 0 0;padding:0;}
-  ul.log li{display:flex;justify-content:space-between;padding:9px 0;border-top:1px solid var(--line);font-size:15px;}
-  ul.log li:first-child{border-top:none;}
-  ul.log .name{flex:1;}
-  ul.log .cal-val{color:var(--sub);margin-right:10px;}
-  ul.log button.del{background:none;border:none;color:var(--sub);cursor:pointer;font-size:15px;padding:0 2px;}
-  .empty{color:var(--sub);font-size:14px;padding:6px 0;}
-  h2{font-size:14px;text-transform:none;color:var(--sub);margin:0 0 10px;font-weight:600;}
-  .meals{display:flex;flex-direction:column;gap:8px;}
-  .meal{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--bg);border:1px solid var(--line);}
-  .meal.active{background:var(--accent-soft);border-color:var(--accent);}
-  .meal .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0;}
-  .meal.active .dot{background:var(--accent);}
-  .meal .mname{flex:1;font-size:15px;}
-  .meal .mtime{color:var(--sub);font-size:13px;}
-  .status-line{font-size:14px;color:var(--sub);margin-top:10px;}
-  .status-line.can{color:var(--accent);font-weight:600;}
-  .status-line.cant{color:var(--warn);font-weight:600;}
-  .hist{display:flex;flex-direction:column;gap:6px;}
-  .hist-row{display:flex;justify-content:space-between;font-size:14px;padding:6px 0;border-top:1px solid var(--line);}
-  .hist-row:first-child{border-top:none;}
-  .hist-cal{color:var(--sub);}
+  .wrap{max-width:520px;margin:0 auto;padding:22px 18px 48px}
+  .num{font-variant-numeric:tabular-nums}
+
+  /* Главный блок: остаток и полоса БЖУ */
+  .hero{padding:6px 2px 22px}
+  .hero-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .left-big{font-size:56px;font-weight:700;line-height:1;letter-spacing:-1.5px}
+  .left-big.over{color:var(--over)}
+  .left-cap{color:var(--sub);font-size:15px;margin-top:6px}
+  .goal-box{display:flex;align-items:center;gap:6px;color:var(--sub);font-size:14px}
+  .goal-box input{width:76px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);
+    background:var(--surface);color:var(--ink);font:inherit;font-size:15px;text-align:right}
+  .kcal-track{height:8px;background:var(--line);border-radius:4px;margin-top:18px;overflow:hidden}
+  .kcal-fill{height:100%;background:var(--ink);border-radius:4px;transition:width .4s ease}
+  .kcal-fill.over{background:var(--over)}
+  .macro-bar{display:flex;height:34px;border-radius:10px;overflow:hidden;margin-top:14px;background:var(--line)}
+  .macro-bar span{display:block;height:100%;transition:width .4s ease}
+  .macro-legend{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+  .macro-legend div{font-size:14px;color:var(--sub)}
+  .macro-legend b{display:block;font-size:20px;color:var(--ink);font-weight:500}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:1px}
+
+  section{background:var(--surface);border-radius:16px;padding:16px 16px 12px;margin-top:14px}
+  h2{font-size:17px;font-weight:500;margin:0 0 8px}
+
+  ul.log{list-style:none;margin:0;padding:0}
+  ul.log li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-top:1px solid var(--line)}
+  ul.log li:first-child{border-top:none}
+  .it-main{flex:1;min-width:0}
+  .it-name{font-weight:500;overflow-wrap:anywhere}
+  .it-meta{font-size:13px;color:var(--sub)}
+  .it-kcal{font-weight:500;white-space:nowrap}
+  .del{background:none;border:none;color:var(--sub);font-size:18px;line-height:1;padding:2px 4px;cursor:pointer;border-radius:6px}
+  .del:focus-visible,button:focus-visible,input:focus-visible,summary:focus-visible{outline:2px solid var(--protein);outline-offset:2px}
+  .empty{color:var(--sub);font-size:15px;padding:6px 0 8px}
+
+  details summary{cursor:pointer;font-weight:500;list-style:none;padding:2px 0 6px}
+  details summary::-webkit-details-marker{display:none}
+  details summary::after{content:"+";float:right;color:var(--sub);font-size:20px;line-height:1}
+  details[open] summary::after{content:"−"}
+  .hint{font-size:14px;color:var(--sub);margin:0 0 12px}
+  .grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .grid .wide{grid-column:1 / -1}
+  label{font-size:13px;color:var(--sub);display:block}
+  label input{display:block;width:100%;margin-top:3px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--bg);color:var(--ink);font:inherit;font-size:15px}
+  .primary{margin-top:12px;width:100%;padding:12px;border:none;border-radius:10px;background:var(--btn);color:var(--btn-ink);
+    font:inherit;font-weight:500;font-size:16px;cursor:pointer}
+  .primary:disabled{opacity:.5}
+
+  .slots{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .slot{border:1px solid var(--line);border-radius:10px;padding:8px 6px;text-align:center;font-size:13px;color:var(--sub)}
+  .slot b{display:block;color:var(--ink);font-weight:500;font-size:14px}
+  .slot.now{border-color:var(--ink);background:var(--bg)}
+  .slot.now b{color:var(--ink)}
+  .slot-status{font-size:14px;color:var(--sub);margin:10px 0 2px}
+
+  .week{display:flex;align-items:flex-end;gap:8px;height:120px;padding-top:6px}
+  .day{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px}
+  .col{width:100%;max-width:34px;border-radius:6px 6px 3px 3px;background:var(--carbs);min-height:3px}
+  .col.over{background:var(--over)}
+  .col.none{background:var(--line)}
+  .day small{font-size:12px;color:var(--sub)}
+  .day em{font-style:normal;font-size:11px;color:var(--sub)}
+
+  .status{font-size:14px;color:var(--sub);text-align:center;margin-top:16px}
+  .status.err{color:var(--over)}
+  .notice{background:var(--surface);border-radius:16px;padding:20px;margin-top:20px;font-size:16px}
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Счётчик калорий</h1>
-  <p class="sub">Записывай приёмы пищи, следи за дневной нормой и временем еды.</p>
-
-  <div class="card">
-    <div class="row">
-      <div>
-        <div class="progress-num" id="eatenNum">0</div>
-        <div class="progress-label" id="progressLabel">из 2000 ккал сегодня</div>
+  <div id="app" hidden>
+    <div class="hero">
+      <div class="hero-top">
+        <div>
+          <div class="left-big num" id="leftBig">—</div>
+          <div class="left-cap" id="leftCap">ккал осталось на сегодня</div>
+        </div>
+        <label class="goal-box" for="goalInput">Норма
+          <input type="number" id="goalInput" min="0" inputmode="numeric" class="num">
+        </label>
       </div>
-      <div class="goal-input">
-        <label for="goalInput" style="font-size:13px;color:var(--sub);">Норма</label>
-        <input type="number" id="goalInput" value="2000" min="0">
+      <div class="kcal-track"><div class="kcal-fill" id="kcalFill" style="width:0"></div></div>
+      <div class="macro-bar" id="macroBar" aria-hidden="true">
+        <span id="barP" style="background:var(--protein);width:0"></span>
+        <span id="barF" style="background:var(--fat);width:0"></span>
+        <span id="barC" style="background:var(--carbs);width:0"></span>
+      </div>
+      <div class="macro-legend">
+        <div><span class="dot" style="background:var(--protein)"></span>Белки<b class="num" id="sumP">0 г</b></div>
+        <div><span class="dot" style="background:var(--fat)"></span>Жиры<b class="num" id="sumF">0 г</b></div>
+        <div><span class="dot" style="background:var(--carbs)"></span>Углеводы<b class="num" id="sumC">0 г</b></div>
       </div>
     </div>
-    <div class="bar"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+
+    <section>
+      <h2>Сегодня съедено</h2>
+      <ul class="log" id="logList"></ul>
+    </section>
+
+    <section>
+      <details id="addBox">
+        <summary>Добавить вручную</summary>
+        <p class="hint">Быстрее всего — прислать боту фото или написать «курица 150 г, рис 200 г». Он сам посчитает калории и БЖУ.</p>
+        <form id="addForm" class="grid" autocomplete="off">
+          <label class="wide">Что съел<input id="fName" required placeholder="Гречка с котлетой"></label>
+          <label>Вес, г<input id="fGrams" type="number" min="0" inputmode="numeric"></label>
+          <label>Ккал<input id="fKcal" type="number" min="0" inputmode="numeric" required></label>
+          <label>Белки, г<input id="fP" type="number" min="0" step="0.1" inputmode="decimal"></label>
+          <label>Жиры, г<input id="fF" type="number" min="0" step="0.1" inputmode="decimal"></label>
+          <label>Углеводы, г<input id="fC" type="number" min="0" step="0.1" inputmode="decimal"></label>
+          <div class="wide"><button class="primary" id="addBtn" type="submit">Записать</button></div>
+        </form>
+      </details>
+    </section>
+
+    <section>
+      <h2>Режим питания</h2>
+      <div class="slots" id="slots"></div>
+      <div class="slot-status" id="slotStatus"></div>
+    </section>
+
+    <section>
+      <h2>Последние 7 дней</h2>
+      <div class="week" id="week"></div>
+    </section>
+
+    <div class="status" id="status"></div>
   </div>
 
-  <div class="card">
-    <h2>Добавить приём пищи</h2>
-    <form class="add" id="addForm">
-      <input type="text" id="foodName" placeholder="Например, овсянка с бананом" required>
-      <input type="number" class="cal" id="foodCal" placeholder="ккал" min="0" required>
-      <button type="submit">+</button>
-    </form>
-    <ul class="log" id="logList"></ul>
-  </div>
-
-  <div class="card">
-    <h2>Режим питания</h2>
-    <div class="meals" id="mealsList"></div>
-    <div class="status-line" id="statusLine"></div>
-  </div>
-
-  <div class="card">
-    <h2>История</h2>
-    <div class="hist" id="histList"></div>
+  <div class="notice" id="noUser" hidden>
+    Открой приложение через бота: напиши ему /app и нажми кнопку «Открыть приложение».
   </div>
 </div>
 
 <script>
 (function(){
-  var todayKey = new Date().toISOString().slice(0,10);
-  var store = {get:function(k,d){try{var v=localStorage.getItem(k);return v===null?d:JSON.parse(v);}catch(e){return d;}},
-               set:function(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}}};
+  var SB_URL = "https://otkdoulqqzghcdzsurmj.supabase.co/rest/v1";
+  var SB_KEY = "sb_publishable_Z5wam__5uURtfvm539BfEA_JMGBZyw6";
 
-  var goal = store.get('cal_goal', 2000);
-  var entries = store.get('cal_entries_'+todayKey, []);
-  var meals = [
-    {name:'Завтрак', start:7, end:10},
-    {name:'Обед', start:12, end:15},
-    {name:'Ужин', start:18, end:20},
-    {name:'После 21:00 — лучше не есть', start:21, end:24}
-  ];
+  var tg = window.Telegram && window.Telegram.WebApp;
+  if (tg) { try { tg.ready(); tg.expand(); } catch(e){} }
+  var tgUser = tg && tg.initDataUnsafe && tg.initDataUnsafe.user;
+  var uid = (tgUser && tgUser.id) || new URLSearchParams(location.search).get("uid");
+  uid = uid ? String(uid).replace(/[^0-9]/g, "") : "";
 
-  var goalInput = document.getElementById('goalInput');
-  var eatenNum = document.getElementById('eatenNum');
-  var progressLabel = document.getElementById('progressLabel');
-  var barFill = document.getElementById('barFill');
-  var logList = document.getElementById('logList');
-  var addForm = document.getElementById('addForm');
-  var mealsList = document.getElementById('mealsList');
-  var statusLine = document.getElementById('statusLine');
-  var histList = document.getElementById('histList');
+  if (!uid) { document.getElementById("noUser").hidden = false; return; }
+  document.getElementById("app").hidden = false;
 
-  goalInput.value = goal;
-  goalInput.addEventListener('change', function(){
-    goal = parseInt(goalInput.value)||0;
-    store.set('cal_goal', goal);
-    render();
-  });
+  var $ = function(id){ return document.getElementById(id); };
+  var num = function(v){ return Number(v) || 0; };
+  var goal = 2000, entries = [], hist = [];
 
-  addForm.addEventListener('submit', function(e){
-    e.preventDefault();
-    var name = document.getElementById('foodName').value.trim();
-    var cal = parseInt(document.getElementById('foodCal').value)||0;
-    if(!name || cal<=0) return;
-    entries.push({name:name, cal:cal, t:Date.now()});
-    store.set('cal_entries_'+todayKey, entries);
-    document.getElementById('foodName').value='';
-    document.getElementById('foodCal').value='';
-    render();
-  });
-
-  function removeEntry(idx){
-    entries.splice(idx,1);
-    store.set('cal_entries_'+todayKey, entries);
-    render();
+  function localDay(d){
+    d = d || new Date();
+    var z = function(n){ return String(n).padStart(2, "0"); };
+    return d.getFullYear() + "-" + z(d.getMonth() + 1) + "-" + z(d.getDate());
   }
 
-  function renderLog(){
-    logList.innerHTML='';
-    if(entries.length===0){
-      logList.innerHTML = '<li class="empty">Пока ничего не добавлено</li>';
-      return;
-    }
-    entries.forEach(function(e,i){
-      var li = document.createElement('li');
-      li.innerHTML = '<span class="name"></span><span class="cal-val"></span><button class="del">✕</button>';
-      li.querySelector('.name').textContent = e.name;
-      li.querySelector('.cal-val').textContent = e.cal+' ккал';
-      li.querySelector('.del').addEventListener('click', function(){removeEntry(i);});
-      logList.appendChild(li);
-    });
+  function sb(method, path, body, prefer){
+    var headers = { apikey: SB_KEY, "Content-Type": "application/json" };
+    if (prefer) headers.Prefer = prefer;
+    return fetch(SB_URL + path, { method: method, headers: headers,
+      body: body ? JSON.stringify(body) : undefined })
+      .then(function(r){
+        return r.text().then(function(t){
+          if (!r.ok) throw new Error("Ошибка базы " + r.status);
+          return t ? JSON.parse(t) : null;
+        });
+      });
   }
 
-  function renderProgress(){
-    var eaten = entries.reduce(function(s,e){return s+e.cal;},0);
-    eatenNum.textContent = eaten;
-    progressLabel.textContent = 'из '+goal+' ккал сегодня';
-    var pct = goal>0 ? Math.min(100, (eaten/goal)*100) : 0;
-    barFill.style.width = pct+'%';
-    barFill.className = 'bar-fill'+(eaten>goal ? ' over':'');
+  function setStatus(text, isErr){
+    var s = $("status"); s.textContent = text || ""; s.className = "status" + (isErr ? " err" : "");
   }
 
-  function renderMeals(){
-    var now = new Date();
-    var h = now.getHours() + now.getMinutes()/60;
-    mealsList.innerHTML='';
-    var activeMeal = null;
-    meals.forEach(function(m){
-      var isActive = h>=m.start && h<m.end;
-      if(isActive) activeMeal = m;
-      var div = document.createElement('div');
-      div.className = 'meal'+(isActive?' active':'');
-      var timeText = m.start+':00–'+m.end+':00';
-      div.innerHTML = '<span class="dot"></span><span class="mname"></span><span class="mtime"></span>';
-      div.querySelector('.mname').textContent = m.name;
-      div.querySelector('.mtime').textContent = timeText;
-      mealsList.appendChild(div);
-    });
-    if(activeMeal && activeMeal.name.indexOf('лучше не есть')===-1){
-      statusLine.textContent = 'Сейчас время: '+activeMeal.name.toLowerCase();
-      statusLine.className = 'status-line can';
-    } else if(activeMeal){
-      statusLine.textContent = 'Позднее время — по плану приёмов пищи уже нет';
-      statusLine.className = 'status-line cant';
-    } else {
-      statusLine.textContent = 'Сейчас не по расписанию приёмов пищи';
-      statusLine.className = 'status-line cant';
-    }
-  }
-
-  function renderHistory(){
-    var days = [];
-    for(var i=1;i<=6;i++){
-      var d = new Date();
-      d.setDate(d.getDate()-i);
-      var key = d.toISOString().slice(0,10);
-      var list = store.get('cal_entries_'+key, []);
-      if(list.length===0) continue;
-      var total = list.reduce(function(s,e){return s+e.cal;},0);
-      days.push({date:key, total:total});
-    }
-    histList.innerHTML='';
-    if(days.length===0){
-      histList.innerHTML = '<div class="empty">История появится со следующего дня</div>';
-      return;
-    }
-    days.forEach(function(d){
-      var row = document.createElement('div');
-      row.className='hist-row';
-      row.innerHTML = '<span></span><span class="hist-cal"></span>';
-      var parts = d.date.split('-');
-      row.querySelector('span').textContent = parts[2]+'.'+parts[1];
-      row.querySelector('.hist-cal').textContent = d.total+' ккал';
-      histList.appendChild(row);
+  function load(){
+    var today = localDay();
+    var weekAgo = localDay(new Date(Date.now() - 7 * 864e5));
+    return Promise.all([
+      sb("GET", "/users?user_id=eq." + uid + "&select=goal"),
+      sb("GET", "/entries?user_id=eq." + uid + "&day=eq." + today + "&order=id.asc"),
+      sb("GET", "/entries?user_id=eq." + uid + "&day=gte." + weekAgo + "&day=lt." + today + "&select=day,calories")
+    ]).then(function(res){
+      goal = res[0] && res[0].length ? num(res[0][0].goal) : 2000;
+      entries = res[1] || [];
+      hist = res[2] || [];
+      render();
+      setStatus("");
+    }).catch(function(){
+      setStatus("Не удалось загрузить данные. Проверь интернет и потяни страницу вниз, чтобы обновить.", true);
     });
   }
 
   function render(){
-    renderLog();
-    renderProgress();
-    renderMeals();
-    renderHistory();
+    var k = 0, p = 0, f = 0, c = 0;
+    entries.forEach(function(e){ k += num(e.calories); p += num(e.protein); f += num(e.fat); c += num(e.carbs); });
+
+    if (document.activeElement !== $("goalInput")) $("goalInput").value = goal;
+    var left = goal - k;
+    $("leftBig").textContent = Math.abs(left);
+    $("leftBig").className = "left-big num" + (left < 0 ? " over" : "");
+    $("leftCap").textContent = left < 0
+      ? "ккал сверх нормы · съедено " + k + " из " + goal
+      : "ккал осталось · съедено " + k + " из " + goal;
+    $("kcalFill").style.width = (goal > 0 ? Math.min(100, k / goal * 100) : 0) + "%";
+    $("kcalFill").className = "kcal-fill" + (left < 0 ? " over" : "");
+
+    var mSum = p + f + c;
+    $("barP").style.width = (mSum ? p / mSum * 100 : 0) + "%";
+    $("barF").style.width = (mSum ? f / mSum * 100 : 0) + "%";
+    $("barC").style.width = (mSum ? c / mSum * 100 : 0) + "%";
+    $("sumP").textContent = Math.round(p) + " г";
+    $("sumF").textContent = Math.round(f) + " г";
+    $("sumC").textContent = Math.round(c) + " г";
+
+    var list = $("logList"); list.innerHTML = "";
+    if (!entries.length){
+      var li = document.createElement("li");
+      li.className = "empty"; li.textContent = "Пока пусто. Пришли боту фото еды или напиши, что съел.";
+      list.appendChild(li);
+    }
+    entries.forEach(function(e){
+      var li = document.createElement("li");
+      var main = document.createElement("div"); main.className = "it-main";
+      var name = document.createElement("div"); name.className = "it-name";
+      name.textContent = e.name + (e.grams ? ", " + e.grams + " г" : "");
+      var meta = document.createElement("div"); meta.className = "it-meta num";
+      meta.textContent = "Б " + Math.round(num(e.protein)) + " · Ж " + Math.round(num(e.fat)) + " · У " + Math.round(num(e.carbs));
+      main.appendChild(name); main.appendChild(meta);
+      var kc = document.createElement("div"); kc.className = "it-kcal num"; kc.textContent = num(e.calories) + " ккал";
+      var del = document.createElement("button"); del.className = "del"; del.type = "button";
+      del.setAttribute("aria-label", "Удалить " + e.name); del.textContent = "×";
+      del.addEventListener("click", function(){ removeEntry(e.id); });
+      li.appendChild(main); li.appendChild(kc); li.appendChild(del);
+      list.appendChild(li);
+    });
+
+    renderSlots();
+    renderWeek();
   }
 
-  render();
-  setInterval(renderMeals, 60000);
+  var SLOTS = [
+    { name: "Завтрак", from: 7, to: 10 },
+    { name: "Обед", from: 12, to: 15 },
+    { name: "Ужин", from: 18, to: 20 },
+    { name: "Не есть", from: 21, to: 24 }
+  ];
+  function renderSlots(){
+    var now = new Date(), h = now.getHours() + now.getMinutes() / 60, active = null;
+    var box = $("slots"); box.innerHTML = "";
+    SLOTS.forEach(function(s, i){
+      var on = h >= s.from && h < s.to; if (on) active = i;
+      var d = document.createElement("div"); d.className = "slot" + (on ? " now" : "");
+      var b = document.createElement("b"); b.textContent = s.name;
+      d.appendChild(b); d.appendChild(document.createTextNode(s.from + ":00–" + s.to + ":00"));
+      box.appendChild(d);
+    });
+    $("slotStatus").textContent = active === null ? "Сейчас не время приёма пищи."
+      : active === 3 ? "Поздно: по плану сегодня больше не едим."
+      : "Сейчас время: " + SLOTS[active].name.toLowerCase() + ".";
+  }
+
+  function renderWeek(){
+    var totals = {};
+    hist.forEach(function(r){ totals[r.day] = (totals[r.day] || 0) + num(r.calories); });
+    var days = [];
+    for (var i = 7; i >= 1; i--){ days.push(localDay(new Date(Date.now() - i * 864e5))); }
+    var max = Math.max(goal, 1);
+    days.forEach(function(d){ if (totals[d] > max) max = totals[d]; });
+    var week = $("week"); week.innerHTML = "";
+    days.forEach(function(d){
+      var v = totals[d] || 0;
+      var col = document.createElement("div");
+      col.className = "col" + (!v ? " none" : v > goal ? " over" : "");
+      col.style.height = (v ? Math.max(4, v / max * 100) : 3) + "%";
+      col.title = v + " ккал";
+      var wrap = document.createElement("div"); wrap.className = "day";
+      var em = document.createElement("em"); em.className = "num"; em.textContent = v || "";
+      var sm = document.createElement("small"); var parts = d.split("-"); sm.textContent = parts[2] + "." + parts[1];
+      wrap.appendChild(em); wrap.appendChild(col); wrap.appendChild(sm);
+      week.appendChild(wrap);
+    });
+  }
+
+  function removeEntry(id){
+    entries = entries.filter(function(e){ return e.id !== id; }); render();
+    sb("DELETE", "/entries?id=eq." + id).catch(function(){ setStatus("Не удалось удалить запись.", true); load(); });
+  }
+
+  $("goalInput").addEventListener("change", function(){
+    var g = parseInt(this.value, 10); if (!(g > 0)) { this.value = goal; return; }
+    goal = g; render();
+    sb("POST", "/users", { user_id: Number(uid), goal: g }, "resolution=merge-duplicates,return=minimal")
+      .then(function(){ setStatus("Норма сохранена."); })
+      .catch(function(){ setStatus("Не удалось сохранить норму.", true); });
+  });
+
+  $("addForm").addEventListener("submit", function(ev){
+    ev.preventDefault();
+    var name = $("fName").value.trim(), kcal = parseInt($("fKcal").value, 10);
+    if (!name || !(kcal >= 0)) return;
+    var grams = parseInt($("fGrams").value, 10);
+    var row = { user_id: Number(uid), day: localDay(), name: name, grams: grams > 0 ? grams : null,
+      calories: kcal, protein: num($("fP").value), fat: num($("fF").value), carbs: num($("fC").value) };
+    $("addBtn").disabled = true;
+    sb("POST", "/users", { user_id: Number(uid), goal: goal }, "resolution=ignore-duplicates,return=minimal")
+      .then(function(){ return sb("POST", "/entries", [row], "return=minimal"); })
+      .then(function(){ $("addForm").reset(); setStatus("Записано."); return load(); })
+      .catch(function(){ setStatus("Не удалось записать. Проверь интернет.", true); })
+      .then(function(){ $("addBtn").disabled = false; });
+  });
+
+  document.addEventListener("visibilitychange", function(){ if (!document.hidden) load(); });
+  setInterval(function(){ if (!document.hidden) load(); }, 20000);
+  load();
 })();
 </script>
 </body>
