@@ -4,6 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <title>Калории</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#FF7B45">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Калории">
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -39,7 +47,7 @@ body{font-family:Manrope,system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;co
   background-color:var(--bg);background-size:260px 260px,cover;background-attachment:fixed}
 button,input{font:inherit;color:inherit}
 button{border:0;background:none;cursor:pointer}
-.app{max-width:480px;margin:0 auto;padding:18px 18px 120px}
+.app{max-width:480px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 18px 120px}
 .screen{display:none}.screen.on{display:block;animation:fade .25s ease}
 @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1}}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
@@ -212,6 +220,16 @@ button{border:0;background:none;cursor:pointer}
 .skel{height:84px;border-radius:20px;margin-bottom:9px;background:linear-gradient(90deg,var(--card) 25%,var(--card2) 50%,var(--card) 75%);background-size:200% 100%;animation:sk 1.2s infinite}
 @keyframes sk{to{background-position:-200% 0}}
 .types button{cursor:pointer}
+.login{position:fixed;inset:0;z-index:80;background:var(--bg);background-image:var(--bggrad);display:none;overflow:auto;padding:calc(40px + env(safe-area-inset-top)) 22px 30px}
+.login.on{display:block}
+.login .lg{max-width:420px;margin:0 auto;text-align:center}
+.login .appic{width:96px;height:96px;border-radius:26px;margin:0 auto 14px;box-shadow:0 14px 30px var(--glow);display:block}
+.lsteps{text-align:left;margin:18px 0}.lsteps div{display:flex;gap:12px;align-items:flex-start;background:var(--card);border-radius:16px;padding:12px 14px;margin-bottom:8px;box-shadow:var(--shadow);font-weight:600;font-size:14px}
+.lsteps i{font-style:normal;width:26px;height:26px;border-radius:50%;background:var(--grad);color:#fff;display:grid;place-items:center;font-weight:800;flex-shrink:0}
+.codein{width:100%;font-size:30px;font-weight:800;letter-spacing:8px;text-align:center;border:2px solid var(--line);border-radius:18px;padding:14px;background:var(--inbg);color:var(--text);outline:0}
+.codein:focus{border-color:var(--g2)}
+.install{display:flex;gap:12px;align-items:center;background:var(--card);border:1.5px dashed var(--g2);border-radius:20px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
+.install img{width:46px;height:46px;border-radius:12px}.install b{display:block}.install .x{margin-left:auto;color:var(--mut);font-size:16px;padding:6px}
 .thm{width:44px;height:44px;border-radius:14px;background:var(--card);box-shadow:var(--shadow);font-size:20px}
 </style>
 </head>
@@ -225,6 +243,7 @@ button{border:0;background:none;cursor:pointer}
   <!-- ГЛАВНАЯ -->
   <section class="screen on" id="s-home">
     <div class="top"><div><div class="hi" id="h-wd">…</div><div class="h1" id="h-day">Сегодня</div></div><div class="av" id="avatar">🙂</div></div>
+    <div id="install"></div>
     <div class="weeknav"><button id="wprev">‹ пред. неделя</button><button id="wnext">след. неделя ›</button></div>
     <div class="days" id="days"></div>
     <div class="card"><div class="ringwrap">
@@ -343,6 +362,7 @@ button{border:0;background:none;cursor:pointer}
     <div class="small" style="margin-top:7px">Бот напомнит в начале каждого приёма пищи.</div>
     <button class="btn" id="save" style="margin-top:14px">Сохранить</button>
     <div class="small" style="text-align:center;margin-top:10px">Норма считается по формуле Миффлина — Сан Жеора.<br>Бот тоже будет использовать эту норму.</div>
+    <div id="acc" style="margin-top:18px"></div>
   </section>
 </div>
 
@@ -357,6 +377,20 @@ button{border:0;background:none;cursor:pointer}
 
 <div class="ov" id="ov"><div class="sheet" id="sheet"></div></div>
 <div class="toast" id="toast"></div>
+<div class="login" id="login"><div class="lg">
+  <img class="appic" src="icon-192.png" alt="">
+  <div class="h1">Калории</div>
+  <div class="small" style="font-size:15px;margin-top:4px">Счётчик калорий: фото еды, рецепты, прогресс</div>
+  <div class="lsteps">
+    <div><i>1</i><span>Открой бота <b>@calorie10_bot</b> в Телеграме</span></div>
+    <div><i>2</i><span>Нажми кнопку «📲 На телефон» или напиши <b>/login</b></span></div>
+    <div><i>3</i><span>Введи сюда код из сообщения бота</span></div>
+  </div>
+  <input class="codein" id="code" inputmode="numeric" maxlength="8" placeholder="••••••" autocomplete="one-time-code">
+  <button class="btn" id="login-go" style="margin-top:12px">Войти</button>
+  <a class="btn ghost" id="login-bot" href="https://t.me/calorie10_bot?start=login" style="margin-top:10px;text-decoration:none">Открыть бота</a>
+  <div class="small" id="login-st" style="margin-top:12px"></div>
+</div></div>
 
 <script>
 const ICONS3D = {
@@ -456,16 +490,21 @@ const DEMO_STATIC = qs.has("static");
 function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 2600); }
 function haptic(k = "light") { try { tg && tg.HapticFeedback.impactOccurred(k); } catch (e) {} }
 
+const INTG = !!(tg && tg.initData);
+function authPayload() { return INTG ? { initData: tg.initData } : { token: lsGet("tok") }; }
+const hasAuth = () => INTG || !!lsGet("tok");
+async function botCall(payload) {
+  const r = await fetch(BOT_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, ...authPayload() }) });
+  const txt = await r.text();
+  if (r.status === 401 && !INTG && payload.action !== "login") { lsSet("tok", ""); showLogin("Вход устарел — войди снова."); }
+  let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (e) {}
+  return { ok: r.ok, status: r.status, data, txt };
+}
 async function sb(method, path, { params = [], body, prefer } = {}) {
   if (DEMO) return demoApi(method, path, params, body);
-  const url = new URL(REST + path);
-  params.forEach(([k, v]) => url.searchParams.append(k, v));
-  const headers = { apikey: SUPABASE_KEY, "Content-Type": "application/json" };
-  if (prefer) headers.Prefer = prefer;
-  const r = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-  const txt = await r.text();
-  if (!r.ok) throw new Error(txt.slice(0, 200));
-  return txt ? JSON.parse(txt) : null;
+  const r = await botCall({ action: "db", table: path.replace(/^\//, ""), method, params, body, prefer });
+  if (!r.ok) throw new Error((r.txt || "").slice(0, 200));
+  return r.data;
 }
 
 /* ================= РАСЧЁТ НОРМЫ ================= */
@@ -801,16 +840,15 @@ function resizeImage(file) {
   });
 }
 async function sendPhoto(file, caption) {
-  if (!(tg && tg.initData)) { toast("Открой приложение из бота, чтобы отправить фото"); return; }
+  if (!hasAuth()) { showLogin(); return; }
   let dataUrl;
   try { dataUrl = await resizeImage(file); } catch (e) { toast("Не получилось открыть это фото"); return; }
   openSheet(`<div class="hero"><img src="${dataUrl}" alt=""></div>
     <div style="display:flex;align-items:center;gap:12px"><div class="loader" style="padding:0"><i></i></div><div><div class="h1" style="font-size:20px">Распознаю блюдо…</div><div class="small">Обычно 5–15 секунд</div></div></div>`);
   let res;
   try {
-    const r = await fetch(BOT_FN, { method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "photo", initData: tg.initData, image: dataUrl.split(",")[1], caption: caption || null }) });
-    res = await r.json().catch(() => ({ error: "Бот ответил непонятно. Попробуй ещё раз." }));
+    const r = await botCall({ action: "photo", image: dataUrl.split(",")[1], caption: caption || null });
+    res = r.data || { error: "Бот ответил непонятно. Попробуй ещё раз." };
   } catch (e) { res = { error: "Не удалось отправить фото. Проверь интернет." }; }
   if (!(res && res.ok && res.items && res.items.length)) {
     openSheet(`<div class="hero"><img src="${dataUrl}" alt=""></div><div class="empty" style="margin-bottom:12px"><div class="e">😕</div>${esc((res && res.error) || "Не получилось распознать фото.")}</div>
@@ -878,11 +916,10 @@ async function genRecipes() {
     let res;
     if (DEMO) { await new Promise(r => setTimeout(r, 300)); res = { ok: true, recipes: window.DEMO_DATA.recipes || [] }; }
     else {
-      if (!(tg && tg.initData)) throw new Error("Открой приложение из бота");
+      if (!hasAuth()) throw new Error("Сначала войди в приложение");
       const likes = dishes().sort((a, b) => b.n - a.n).slice(0, 12).map(d => d.name);
-      const r = await fetch(BOT_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "recipes", initData: tg.initData,
-        goal: goalKcal(), protein: macroGoals().p, meals: userMeals().items.map(m => m.name), filters: [...state.rcf], likes }) });
-      res = await r.json().catch(() => ({ error: "Бот ответил непонятно" }));
+      const r = await botCall({ action: "recipes", goal: goalKcal(), protein: macroGoals().p, meals: userMeals().items.map(m => m.name), filters: [...state.rcf], likes });
+      res = r.data || { error: "Бот ответил непонятно" };
     }
     if (!res.ok) throw new Error(res.error || "Не получилось");
     state.recipes = res.recipes; lsSet(rcKey(), JSON.stringify(res.recipes)); haptic(); drawRecipes();
@@ -1176,16 +1213,58 @@ applyTheme();
 document.addEventListener("visibilitychange", () => { if (!document.hidden && uid && !DEMO && !$("#ov").classList.contains("on")) refresh().catch(() => {}); });
 setInterval(() => { if (!document.hidden && uid && !DEMO && !$("#ov").classList.contains("on") && $("#s-home").classList.contains("on")) refresh().catch(() => {}); }, 30000);
 
+/* ================= ВХОД И УСТАНОВКА НА ТЕЛЕФОН ================= */
+function isStandalone() { return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true; }
+function showLogin(msg) { $("#login").classList.add("on"); $("#login-st").textContent = msg || ""; }
+async function doLogin(code) {
+  code = String(code || "").replace(/\D/g, "");
+  if (code.length < 6) { $("#login-st").textContent = "Введи код из сообщения бота"; return false; }
+  $("#login-st").textContent = "Проверяю код…";
+  let r; try { r = await botCall({ action: "login", code }); } catch (e) { $("#login-st").textContent = "Нет интернета. Попробуй ещё раз."; return false; }
+  if (!r.ok || !r.data || !r.data.token) { $("#login-st").textContent = (r.data && r.data.error) || "Код не подошёл. Попроси у бота новый: /login"; return false; }
+  lsSet("tok", r.data.token); lsSet("uid", String(r.data.uid)); return true;
+}
+$("#login-go").onclick = async () => { if (await doLogin($("#code").value)) location.reload(); };
+$("#code").addEventListener("keydown", e => { if (e.key === "Enter") $("#login-go").click(); });
+function renderAcc() {
+  if (INTG || DEMO) { $("#acc").innerHTML = ""; return; }
+  $("#acc").innerHTML = `<button class="btn ghost" id="logout">Выйти из приложения</button>`;
+  $("#logout").onclick = async () => { try { await botCall({ action: "logout" }); } catch (e) {} lsSet("tok", ""); lsSet("uid", ""); location.reload(); };
+}
+let installEvt = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEvt = e; renderInstall(); });
+function renderInstall() {
+  const box = $("#install"); if (!box) return;
+  if (INTG || DEMO && !qs.has("install") || isStandalone() || lsGet("noinst")) { box.innerHTML = ""; return; }
+  const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent) || qs.get("install") === "ios";
+  box.innerHTML = `<div class="install"><img src="icon-192.png" alt=""><div style="min-width:0"><b>Установи на телефон</b><div class="small">${ios
+    ? "Нажми «Поделиться» ⬆️ внизу Safari → «На экран «Домой»»"
+    : installEvt ? "Иконка появится на главном экране" : "Меню ⋮ браузера → «Добавить на главный экран»"}</div>
+    ${!ios && installEvt ? `<button class="btn" id="inst-go" style="padding:9px;margin-top:8px;font-size:14px">Установить</button>` : ""}</div><button class="x" id="inst-x">✕</button></div>`;
+  $("#inst-x").onclick = () => { lsSet("noinst", "1"); renderInstall(); };
+  if ($("#inst-go")) $("#inst-go").onclick = async () => { installEvt.prompt(); await installEvt.userChoice; installEvt = null; renderInstall(); };
+}
+
 /* ================= СТАРТ ================= */
 (async function init() {
   if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
   const name = tg && tg.initDataUnsafe && tg.initDataUnsafe.user && tg.initDataUnsafe.user.first_name;
   if (name) $("#avatar").textContent = name[0].toUpperCase();
   if (DEMO) { uid = 1; await setupDemo(); }
-  if (!uid) { $("#meals").innerHTML = `<div class="empty"><div class="e">🤖</div>Открой приложение из бота кнопкой «📱 Приложение».</div>`; renderWeek(); return; }
+  else if (INTG) { uid = tg.initDataUnsafe.user.id; }
+  else {
+    if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+    const code = qs.get("login");
+    if (code) { history.replaceState(null, "", location.pathname + (isStandalone() ? "?pwa=1" : "")); if (!lsGet("tok")) await doLogin(code); }
+    if (!lsGet("tok")) { showLogin(); renderWeek(); return; }
+    uid = lsGet("uid");
+  }
+  if (!uid) { showLogin(); renderWeek(); return; }
   $("#meals").innerHTML = `<div class="loader"><i></i></div>`;
   try {
     await loadUser();
+    if (!name && state.user.name) $("#avatar").textContent = state.user.name[0].toUpperCase();
+    renderAcc(); renderInstall();
     await Promise.all([loadDay(), loadHist(), loadWeights(), loadDaily(), loadFavs()]);
     renderHome();
     const s = qs.get("screen"); if (s) show(s);
