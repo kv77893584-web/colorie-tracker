@@ -841,11 +841,11 @@ function openAdd() {
     if (x) delFav(+x.dataset.xfav);
   };
 }
-function resizeImage(file) {
+function resizeImage(file, max = 1024) {
   return new Promise((resolve, reject) => {
     const url = URL.createObjectURL(file), img = new Image();
     img.onload = () => {
-      const k = Math.min(1, 1024 / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight)), c = document.createElement("canvas");
       c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
       resolve(c.toDataURL("image/jpeg", 0.8));
@@ -962,14 +962,26 @@ $("#rc-list").addEventListener("click", e => { const b = e.target.closest("[data
 $("#rc-more").onclick = () => { haptic("medium"); genRecipes(); };
 
 /* ================= ШТРИХКОД ================= */
-const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+// Сканер zxing-wasm (быстрый, хорошо читает и на iPhone), плюс встроенный BarcodeDetector там, где он есть
+const ZXW_URL = "https://cdn.jsdelivr.net/npm/zxing-wasm@3.1.4/dist/iife/reader/index.js";
 const BAR_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"];
-let scanStop = null;
+const ZXW_FORMATS = ["EAN13", "EAN8", "UPCA", "UPCE", "Code128"];
+let scanStop = null, zxwReady = null;
 function stopScan() { if (scanStop) { try { scanStop(); } catch (e) {} scanStop = null; } }
 function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+function loadZXW() {
+  if (!zxwReady) zxwReady = (window.ZXingWASM ? Promise.resolve() : loadScript(ZXW_URL)).then(() => window.ZXingWASM).catch(e => { zxwReady = null; throw e; });
+  return zxwReady;
+}
+async function zxwRead(src) {
+  const Z = await loadZXW();
+  const r = await Z.readBarcodes(src, { formats: ZXW_FORMATS, tryHarder: true, maxNumberOfSymbols: 1 });
+  const ok = r && r.find(x => x.isValid !== false && x.text);
+  return ok ? ok.text : null;
+}
 function openBarcode() {
   openSheet(`<div class="h1" style="font-size:22px;margin-bottom:10px">Штрихкод</div>
-    <div class="scanbox"><video id="bar-video" playsinline muted></video><div class="scanframe"><i></i></div><div class="scanhint" id="bar-hint">Наведи камеру на штрихкод</div></div>
+    <div class="scanbox"><video id="bar-video" playsinline muted autoplay></video><div class="scanframe"><i></i></div><div class="scanhint" id="bar-hint">Наведи камеру на штрихкод</div></div>
     <div style="display:flex;gap:10px;margin-top:12px">
       <label class="btn ghost" for="bar-in" style="flex:1;padding:13px;font-size:14px">📷 Сфотографировать</label>
       <input type="file" id="bar-in" accept="image/*" capture="environment" hidden>
@@ -978,56 +990,73 @@ function openBarcode() {
     <div style="display:flex;gap:8px"><label class="fld" style="flex:1;margin:0"><input id="bar-code" inputmode="numeric" placeholder="4840000000000" autocomplete="off"></label><button class="btn" id="bar-go" style="width:auto;padding:0 20px">Найти</button></div>
     <div id="bar-st" class="small" style="margin-top:12px"></div>`);
   $("#bar-in").onchange = async e => { const f = e.target.files && e.target.files[0]; if (!f) return;
-    stopScan(); $("#bar-st").textContent = "Читаю штрихкод…"; const code = await decodeBarcodeFile(f);
-    if (!code) { $("#bar-st").textContent = "Не получилось прочитать. Сфотографируй ближе и ровнее или введи цифры."; return; }
-    findProduct(code); };
-  $("#bar-go").onclick = () => { const c = $("#bar-code").value.replace(/\D/g, ""); if (c.length >= 8) { stopScan(); findProduct(c); } else toast("Введи цифры под штрихкодом"); };
+    stopScan(); $("#bar-st").textContent = "Читаю штрихкод…";
+    const code = await decodeBarcodeFile(f);
+    if (code) return findProduct(code);
+    readByAI(f, null, 0); }; // не прочитал сам — фото читает ИИ (цифры под штрихкодом или этикетку)
+  $("#bar-go").onclick = () => { const c = $("#bar-code").value.replace(/\D/g, ""); if (c.length >= 8) findProduct(c); else toast("Введи цифры под штрихкодом"); };
   $("#bar-code").addEventListener("keydown", e => { if (e.key === "Enter") $("#bar-go").click(); });
   startLiveScan();
 }
 async function startLiveScan() {
   const v = $("#bar-video"), hint = t => { const h = $("#bar-hint"); if (h) h.textContent = t; };
+  loadZXW().catch(() => {});
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { hint("Камера тут недоступна — сфотографируй штрихкод или введи цифры"); return; }
   let stream;
-  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } }, audio: false }); }
   catch (e) { hint("Нет доступа к камере — разреши его или сфотографируй штрихкод"); return; }
   if (!document.body.contains(v)) { stream.getTracks().forEach(t => t.stop()); return; }
   v.srcObject = stream; try { await v.play(); } catch (e) {}
-  let stopped = false, reader = null;
-  scanStop = () => { stopped = true; stream.getTracks().forEach(t => t.stop()); if (reader) try { reader.reset(); } catch (e) {} };
+  try { const tr = stream.getVideoTracks()[0], caps = tr.getCapabilities ? tr.getCapabilities() : {};
+    if (caps.focusMode && caps.focusMode.includes("continuous")) await tr.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch (e) {}
+  let stopped = false, tick = 0;
+  scanStop = () => { stopped = true; stream.getTracks().forEach(t => t.stop()); };
   const found = code => { if (stopped) return; stopScan(); haptic("heavy"); $("#bar-code") && ($("#bar-code").value = code); findProduct(code); };
-  if ("BarcodeDetector" in window) {
-    try {
-      const det = new BarcodeDetector({ formats: BAR_FORMATS });
-      const loop = async () => { if (stopped) return; try { const r = await det.detect(v); if (r && r[0]) return found(r[0].rawValue); } catch (e) {} setTimeout(loop, 180); };
-      return loop();
-    } catch (e) {}
-  }
-  try {
-    if (!window.ZXing) await loadScript(ZXING_URL);
+  let det = null;
+  if ("BarcodeDetector" in window) { try { det = new BarcodeDetector({ formats: BAR_FORMATS }); } catch (e) {} }
+  const cv = document.createElement("canvas"), cx = cv.getContext("2d", { willReadFrequently: true });
+  const loop = async () => {
     if (stopped) return;
-    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128]);
-    reader = new ZXing.BrowserMultiFormatReader(hints, 250);
-    reader.decodeFromVideoElementContinuously(v, res => { if (res) found(res.getText()); });
-  } catch (e) { hint("Не получилось запустить сканер — сфотографируй штрихкод или введи цифры"); }
+    try {
+      if (v.readyState >= 2 && v.videoWidth) {
+        if (det) { const r = await det.detect(v); if (r && r[0]) return found(r[0].rawValue); }
+        if (window.ZXingWASM && (!det || tick % 2)) {
+          // середина кадра — там, где рамка
+          const w = v.videoWidth, h = v.videoHeight, sw = w, sh = Math.min(h, Math.round(w * 0.7));
+          const k = Math.min(1, 1280 / sw);
+          cv.width = Math.round(sw * k); cv.height = Math.round(sh * k);
+          cx.drawImage(v, 0, Math.round((h - sh) / 2), sw, sh, 0, 0, cv.width, cv.height);
+          const code = await zxwRead(cx.getImageData(0, 0, cv.width, cv.height));
+          if (code) return found(code);
+        }
+      }
+    } catch (e) {}
+    tick++; setTimeout(loop, 120);
+  };
+  loop();
 }
 async function decodeBarcodeFile(file) {
   try {
     const img = await createImageBitmap(file);
-    const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement("canvas");
-    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
-    if ("BarcodeDetector" in window) {
-      try { const r = await new BarcodeDetector({ formats: BAR_FORMATS }).detect(c); if (r[0]) return r[0].rawValue; } catch (e) {}
+    for (const max of [1600, 1000, 2600]) {
+      const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas");
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const cx = c.getContext("2d"); cx.drawImage(img, 0, 0, c.width, c.height);
+      if ("BarcodeDetector" in window) {
+        try { const r = await new BarcodeDetector({ formats: BAR_FORMATS }).detect(c); if (r[0]) return r[0].rawValue; } catch (e) {}
+      }
+      try { const t = await zxwRead(cx.getImageData(0, 0, c.width, c.height)); if (t) return t; } catch (e) {}
     }
-    if (!window.ZXing) await loadScript(ZXING_URL);
-    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
-    const res = await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(c.toDataURL("image/jpeg", .92));
-    return res && res.getText();
-  } catch (e) { return null; }
+  } catch (e) {}
+  return null;
 }
 async function lookupProduct(code) {
-  if (DEMO) return { code, name: "Йогурт греческий 2%", brand: "JLC", kcal: 66, p: 8.5, f: 2, c: 3.4, serving: 140, img: "" };
+  if (DEMO) return { code, name: "Йогурт греческий 2%", brand: "JLC", kcal: 66, p: 8.5, f: 2, c: 3.4, serving: 140, img: "", source: "off" };
+  // бот ищет: наша база → Open Food Facts → поиск в интернете
+  if (hasAuth()) {
+    const r = await botCall({ action: "barcode", code }, 50000);
+    if (r.ok && r.data) return r.data.product || null;
+  }
   const fields = "product_name,product_name_ru,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,quantity";
   const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${fields}`);
   const j = await r.json(); if (j.status !== 1 || !j.product) return null;
@@ -1035,29 +1064,51 @@ async function lookupProduct(code) {
   const kcal = n["energy-kcal_100g"] ?? (n["energy_100g"] ? n["energy_100g"] / 4.184 : null);
   return { code, name: P.product_name_ru || P.product_name || P.product_name_ro || "Товар " + code, brand: (P.brands || "").split(",")[0], qty: P.quantity || "",
     kcal: kcal == null ? null : +kcal, p: +n.proteins_100g || 0, f: +n.fat_100g || 0, c: +n.carbohydrates_100g || 0,
-    serving: +P.serving_quantity || 100, img: P.image_front_small_url || "" };
+    serving: +P.serving_quantity || 100, img: P.image_front_small_url || "", source: "off" };
 }
 async function findProduct(code) {
+  stopScan();
   const st = $("#bar-st");
-  if (st) st.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><div class="loader" style="padding:0"><i style="width:22px;height:22px;border-width:3px"></i></div>Ищу товар ${esc(code)}…</div>`;
+  if (st) st.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><div class="loader" style="padding:0"><i style="width:22px;height:22px;border-width:3px"></i></div><div>Ищу товар ${esc(code)}…<br>Если его нет в базе — поищу в интернете, это до 20 секунд.</div></div>`;
   let P = null; try { P = await lookupProduct(code); } catch (e) {}
-  if (!P) {
-    openSheet(`<div class="empty" style="margin-bottom:12px"><div class="e">📦</div>Товара ${esc(code)} пока нет в открытой базе продуктов.<br>Сфотографируй таблицу пищевой ценности на упаковке — прочитаю калории и БЖУ сам.</div>
-      <label class="fld"><span class="small">Сколько съел, г (необязательно)</span><input id="nf-g" type="number" inputmode="numeric" placeholder="100"></label>
-      <label class="btn" for="nf-photo">📷 Сфотографировать этикетку</label><input type="file" id="nf-photo" accept="image/*" capture="environment" hidden>
-      <div style="display:flex;gap:10px;margin-top:10px"><button class="btn ghost" id="nf-again" style="flex:1">Сканировать ещё</button><button class="btn ghost" id="nf-manual" style="flex:1">Ввести вручную</button></div>`);
-    $("#nf-photo").onchange = e => { const f = e.target.files && e.target.files[0]; if (!f) return; const g = +$("#nf-g").value || 0;
-      sendPhoto(f, `На фото упаковка или этикетка товара со штрихкодом ${code}. Прочитай название товара и пищевую ценность на 100 г с этикетки и посчитай на порцию ${g ? g + " г" : "100 г (если на упаковке указан вес порции — возьми его)"}.`); };
-    $("#nf-again").onclick = openBarcode; $("#nf-manual").onclick = openManual; return;
-  }
+  if (!P || P.kcal == null) return notFound(code, P && P.name);
+  showProduct(P, code, 0);
+}
+function notFound(code, name) {
+  openSheet(`<div class="empty" style="margin-bottom:12px"><div class="e">📦</div>${name ? `<b>${esc(name)}</b><br>` : ""}Не нашёл калорийность товара ${esc(code)} ни в базе, ни в интернете.<br>Сфотографируй таблицу пищевой ценности на упаковке — прочитаю и запомню этот товар для всех.</div>
+    <label class="fld"><span class="small">Сколько съел, г (необязательно)</span><input id="nf-g" type="number" inputmode="numeric" placeholder="100"></label>
+    <label class="btn" for="nf-photo">📷 Сфотографировать этикетку</label><input type="file" id="nf-photo" accept="image/*" capture="environment" hidden>
+    <div style="display:flex;gap:10px;margin-top:10px"><button class="btn ghost" id="nf-again" style="flex:1">Сканировать ещё</button><button class="btn ghost" id="nf-manual" style="flex:1">Ввести вручную</button></div>`);
+  $("#nf-photo").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) readByAI(f, code, +$("#nf-g").value || 0); };
+  $("#nf-again").onclick = openBarcode; $("#nf-manual").onclick = openManual;
+}
+// Фото упаковки → ИИ читает таблицу пищевой ценности и/или цифры штрихкода; товар запоминается в общей базе
+async function readByAI(file, code, grams) {
+  stopScan();
+  if (DEMO) return showProduct({ code: code || "4820000000000", name: "Печенье овсяное", brand: "Demo", kcal: 437, p: 6.5, f: 16, c: 68, serving: 100, img: "", source: "label" }, code || "4820000000000", grams);
+  if (!hasAuth()) { showLogin(); return; }
+  let dataUrl;
+  try { dataUrl = await resizeImage(file, 1600); } catch (e) { toast("Не получилось открыть это фото"); return; }
+  openSheet(`<div class="hero"><img src="${dataUrl}" alt=""></div>
+    <div style="display:flex;align-items:center;gap:12px"><div class="loader" style="padding:0"><i></i></div><div><div class="h1" style="font-size:20px">Читаю упаковку…</div><div class="small">Обычно 5–20 секунд</div></div></div>`);
+  const r = await botCall({ action: "barcode", code: code || "", image: dataUrl.split(",")[1] }, 70000);
+  const d = r.data || {};
+  if (d.product && d.product.kcal != null) return showProduct(d.product, d.code || code || "", grams);
+  if (!code && d.code) return notFound(d.code, d.product && d.product.name);
+  openSheet(`<div class="hero"><img src="${dataUrl}" alt=""></div><div class="empty" style="margin-bottom:12px"><div class="e">😕</div>${esc(d.error || (code ? "Не получилось прочитать таблицу. Сфотографируй её ближе и ровнее." : "Не вижу штрихкода. Сфотографируй ближе или введи цифры."))}</div>
+    <button class="btn" id="ai-again">Попробовать ещё</button>`);
+  $("#ai-again").onclick = () => code ? notFound(code) : openBarcode();
+}
+function showProduct(P, code, grams) {
+  const g0 = Math.round(grams || P.serving || 100);
   haptic("medium");
   openSheet(`<div class="prod"><div class="pi">${P.img ? `<img src="${esc(P.img)}" alt="">` : "📦"}</div>
-      <div style="min-width:0"><div class="h1" style="font-size:20px;line-height:1.2">${esc(P.name)}</div><div class="small">${esc([P.brand, P.qty].filter(Boolean).join(", "))}</div><div class="small">штрихкод ${esc(code)}</div></div></div>
+      <div style="min-width:0"><div class="h1" style="font-size:20px;line-height:1.2">${esc(P.name)}</div><div class="small">${esc([P.brand, P.qty].filter(Boolean).join(", "))}</div>${code ? `<div class="small">штрихкод ${esc(code)}</div>` : ""}${P.source === "web" ? `<div class="small" style="color:var(--g3)">🔎 Найдено в интернете — сверь с упаковкой</div>` : ""}</div></div>
     ${P.kcal == null ? `<div class="empty" style="margin-bottom:12px">В базе нет калорийности этого товара. Нажми «Записать» и введи её с упаковки.</div>` : `
     <div class="small" style="margin-bottom:6px">На 100 г</div>
     <div class="chips" style="margin-bottom:14px"><div class="chip">${fmt(P.kcal)} ккал</div><div class="chip" style="color:var(--p)">Б ${fmt1(P.p)}</div><div class="chip" style="color:#D9971A">Ж ${fmt1(P.f)}</div><div class="chip" style="color:var(--c)">У ${fmt1(P.c)}</div></div>`}
-    <label class="fld"><span class="small">Сколько съел, г</span><input id="pr-g" type="number" inputmode="numeric" value="${Math.round(P.serving)}"></label>
-    <div class="qg">${[50, 100, 150, 200, Math.round(P.serving)].filter((x, i, a) => a.indexOf(x) === i).map(g => `<button data-g="${g}">${g} г</button>`).join("")}</div>
+    <label class="fld"><span class="small">Сколько съел, г</span><input id="pr-g" type="number" inputmode="numeric" value="${g0}"></label>
+    <div class="qg">${[50, 100, 150, 200, Math.round(P.serving || 100)].filter((x, i, a) => a.indexOf(x) === i).map(g => `<button data-g="${g}">${g} г</button>`).join("")}</div>
     <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 14px"><div class="small">Будет записано</div><div class="big gtext" style="font-size:28px"><span id="pr-k">0</span> <span class="small">ккал</span></div></div>
     <button class="btn" id="pr-add">Записать</button>
     <button class="btn ghost" id="pr-again" style="margin-top:10px">Сканировать другой</button>`);
