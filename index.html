@@ -230,6 +230,15 @@ button{border:0;background:none;cursor:pointer}
 .codein:focus{border-color:var(--g2)}
 .install{display:flex;gap:12px;align-items:center;background:var(--card);border:1.5px dashed var(--g2);border-radius:20px;padding:12px 14px;margin-bottom:14px;box-shadow:var(--shadow)}
 .install img{width:46px;height:46px;border-radius:12px}.install b{display:block}.install .x{margin-left:auto;color:var(--mut);font-size:16px;padding:6px}
+.scanbox{position:relative;height:230px;border-radius:22px;overflow:hidden;background:#111}
+.scanbox video{width:100%;height:100%;object-fit:cover;display:block}
+.scanframe{position:absolute;left:12%;right:12%;top:30%;bottom:30%;border:3px solid rgba(255,255,255,.9);border-radius:16px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+.scanframe i{position:absolute;left:6px;right:6px;top:50%;height:2px;background:var(--g3);box-shadow:0 0 10px var(--g3);animation:scanl 1.6s ease-in-out infinite}
+@keyframes scanl{0%,100%{transform:translateY(-34px)}50%{transform:translateY(34px)}}
+.scanhint{position:absolute;left:0;right:0;bottom:10px;text-align:center;color:#fff;font-weight:700;font-size:13px;text-shadow:0 1px 4px rgba(0,0,0,.6);padding:0 10px}
+.prod{display:flex;gap:12px;align-items:center;margin-bottom:12px}.prod .pi{width:76px;height:76px;border-radius:18px;background:var(--card);display:grid;place-items:center;font-size:36px;overflow:hidden;flex-shrink:0;box-shadow:var(--shadow)}
+.prod .pi img{width:100%;height:100%;object-fit:contain;background:#fff}
+.qg{display:flex;gap:6px;flex-wrap:wrap}.qg button{padding:8px 12px;border-radius:12px;background:var(--card2);font-weight:700;font-size:13px}
 .thm{width:44px;height:44px;border-radius:14px;background:var(--card);box-shadow:var(--shadow);font-size:20px}
 </style>
 </head>
@@ -493,8 +502,12 @@ function haptic(k = "light") { try { tg && tg.HapticFeedback.impactOccurred(k); 
 const INTG = !!(tg && tg.initData);
 function authPayload() { return INTG ? { initData: tg.initData } : { token: lsGet("tok") }; }
 const hasAuth = () => INTG || !!lsGet("tok");
-async function botCall(payload) {
-  const r = await fetch(BOT_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, ...authPayload() }) });
+async function botCall(payload, timeoutMs = 30000) {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), timeoutMs);
+  let r;
+  try { r = await fetch(BOT_FN, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...payload, ...authPayload() }), signal: ctl.signal }); }
+  catch (e) { clearTimeout(timer); return { ok: false, status: 0, data: { error: e.name === "AbortError" ? "ИИ не ответил за минуту. Попробуй ещё раз чуть позже." : "Нет связи с интернетом. Проверь его и попробуй ещё раз." }, txt: "" }; }
+  clearTimeout(timer);
   const txt = await r.text();
   if (r.status === 401 && !INTG && payload.action !== "login") { lsSet("tok", ""); showLogin("Вход устарел — войди снова."); }
   let data = null; try { data = txt ? JSON.parse(txt) : null; } catch (e) {}
@@ -745,7 +758,7 @@ function checkCelebrate(k, goal) {
 
 /* ================= ОКНО ПРИЁМА ПИЩИ ================= */
 function openSheet(html) { $("#sheet").onclick = null; $("#sheet").innerHTML = `<div class="grab"></div>` + html; $("#ov").classList.add("on"); }
-function closeSheet() { $("#ov").classList.remove("on", "center"); $("#sheet").style.background = ""; }
+function closeSheet() { stopScan(); $("#ov").classList.remove("on", "center"); $("#sheet").style.background = ""; }
 $("#ov").addEventListener("click", e => { if (e.target.id === "ov") closeSheet(); });
 
 function openMeal(i) {
@@ -808,6 +821,7 @@ function openAdd() {
     <label class="fld"><span class="small">Подпись к фото (необязательно, так точнее)</span><input id="snap-cap" placeholder="стейк 250 г, пюре 150 г" autocomplete="off"></label>
     <div style="display:flex;gap:10px;margin-bottom:6px">
       <label class="opt" for="photo-in" style="flex:1;flex-direction:column;align-items:flex-start;gap:8px;margin:0"><div class="oi">📷</div><b>Фото</b></label>
+      <button class="opt" id="o-bar" style="flex:1;flex-direction:column;align-items:flex-start;gap:8px;margin:0"><div class="oi">▥</div><b>Штрихкод</b></button>
       <button class="opt" id="o-manual" style="flex:1;flex-direction:column;align-items:flex-start;gap:8px;margin:0"><div class="oi">✍️</div><b>Вручную</b></button>
     </div>
     <input type="file" id="photo-in" accept="image/*" hidden>
@@ -819,6 +833,7 @@ function openAdd() {
       : `<div class="small">Открой любой приём пищи и нажми «⭐ В избранное» — он появится здесь.</div>`}`);
   $("#photo-in").onchange = e => { const f = e.target.files && e.target.files[0]; if (f) sendPhoto(f, $("#snap-cap").value.trim()); };
   $("#o-manual").onclick = openManual;
+  $("#o-bar").onclick = openBarcode;
   $("#sheet").onclick = e => {
     const r = e.target.closest("[data-rep]"), f = e.target.closest("[data-fav]"), x = e.target.closest("[data-xfav]");
     if (r) addFood(state.rep[+r.dataset.rep].items);
@@ -847,7 +862,7 @@ async function sendPhoto(file, caption) {
     <div style="display:flex;align-items:center;gap:12px"><div class="loader" style="padding:0"><i></i></div><div><div class="h1" style="font-size:20px">Распознаю блюдо…</div><div class="small">Обычно 5–15 секунд</div></div></div>`);
   let res;
   try {
-    const r = await botCall({ action: "photo", image: dataUrl.split(",")[1], caption: caption || null });
+    const r = await botCall({ action: "photo", image: dataUrl.split(",")[1], caption: caption || null }, 60000);
     res = r.data || { error: "Бот ответил непонятно. Попробуй ещё раз." };
   } catch (e) { res = { error: "Не удалось отправить фото. Проверь интернет." }; }
   if (!(res && res.ok && res.items && res.items.length)) {
@@ -918,7 +933,7 @@ async function genRecipes() {
     else {
       if (!hasAuth()) throw new Error("Сначала войди в приложение");
       const likes = dishes().sort((a, b) => b.n - a.n).slice(0, 12).map(d => d.name);
-      const r = await botCall({ action: "recipes", goal: goalKcal(), protein: macroGoals().p, meals: userMeals().items.map(m => m.name), filters: [...state.rcf], likes });
+      const r = await botCall({ action: "recipes", goal: goalKcal(), protein: macroGoals().p, meals: userMeals().items.map(m => m.name), filters: [...state.rcf], likes }, 70000);
       res = r.data || { error: "Бот ответил непонятно" };
     }
     if (!res.ok) throw new Error(res.error || "Не получилось");
@@ -945,6 +960,113 @@ $("#rc-f").addEventListener("click", e => { const b = e.target.closest("[data-f]
   state.rcf.has(k) ? state.rcf.delete(k) : state.rcf.add(k); lsSet("rcf", JSON.stringify([...state.rcf])); b.classList.toggle("on"); haptic(); });
 $("#rc-list").addEventListener("click", e => { const b = e.target.closest("[data-r]"); if (b) openRecipe(+b.dataset.r); });
 $("#rc-more").onclick = () => { haptic("medium"); genRecipes(); };
+
+/* ================= ШТРИХКОД ================= */
+const ZXING_URL = "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js";
+const BAR_FORMATS = ["ean_13", "ean_8", "upc_a", "upc_e", "code_128"];
+let scanStop = null;
+function stopScan() { if (scanStop) { try { scanStop(); } catch (e) {} scanStop = null; } }
+function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src; s.onload = res; s.onerror = rej; document.head.appendChild(s); }); }
+function openBarcode() {
+  openSheet(`<div class="h1" style="font-size:22px;margin-bottom:10px">Штрихкод</div>
+    <div class="scanbox"><video id="bar-video" playsinline muted></video><div class="scanframe"><i></i></div><div class="scanhint" id="bar-hint">Наведи камеру на штрихкод</div></div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <label class="btn ghost" for="bar-in" style="flex:1;padding:13px;font-size:14px">📷 Сфотографировать</label>
+      <input type="file" id="bar-in" accept="image/*" capture="environment" hidden>
+    </div>
+    <div class="lbl">Или введи цифры под штрихкодом</div>
+    <div style="display:flex;gap:8px"><label class="fld" style="flex:1;margin:0"><input id="bar-code" inputmode="numeric" placeholder="4840000000000" autocomplete="off"></label><button class="btn" id="bar-go" style="width:auto;padding:0 20px">Найти</button></div>
+    <div id="bar-st" class="small" style="margin-top:12px"></div>`);
+  $("#bar-in").onchange = async e => { const f = e.target.files && e.target.files[0]; if (!f) return;
+    stopScan(); $("#bar-st").textContent = "Читаю штрихкод…"; const code = await decodeBarcodeFile(f);
+    if (!code) { $("#bar-st").textContent = "Не получилось прочитать. Сфотографируй ближе и ровнее или введи цифры."; return; }
+    findProduct(code); };
+  $("#bar-go").onclick = () => { const c = $("#bar-code").value.replace(/\D/g, ""); if (c.length >= 8) { stopScan(); findProduct(c); } else toast("Введи цифры под штрихкодом"); };
+  $("#bar-code").addEventListener("keydown", e => { if (e.key === "Enter") $("#bar-go").click(); });
+  startLiveScan();
+}
+async function startLiveScan() {
+  const v = $("#bar-video"), hint = t => { const h = $("#bar-hint"); if (h) h.textContent = t; };
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { hint("Камера тут недоступна — сфотографируй штрихкод или введи цифры"); return; }
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false }); }
+  catch (e) { hint("Нет доступа к камере — разреши его или сфотографируй штрихкод"); return; }
+  if (!document.body.contains(v)) { stream.getTracks().forEach(t => t.stop()); return; }
+  v.srcObject = stream; try { await v.play(); } catch (e) {}
+  let stopped = false, reader = null;
+  scanStop = () => { stopped = true; stream.getTracks().forEach(t => t.stop()); if (reader) try { reader.reset(); } catch (e) {} };
+  const found = code => { if (stopped) return; stopScan(); haptic("heavy"); $("#bar-code") && ($("#bar-code").value = code); findProduct(code); };
+  if ("BarcodeDetector" in window) {
+    try {
+      const det = new BarcodeDetector({ formats: BAR_FORMATS });
+      const loop = async () => { if (stopped) return; try { const r = await det.detect(v); if (r && r[0]) return found(r[0].rawValue); } catch (e) {} setTimeout(loop, 180); };
+      return loop();
+    } catch (e) {}
+  }
+  try {
+    if (!window.ZXing) await loadScript(ZXING_URL);
+    if (stopped) return;
+    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A, ZXing.BarcodeFormat.UPC_E, ZXing.BarcodeFormat.CODE_128]);
+    reader = new ZXing.BrowserMultiFormatReader(hints, 250);
+    reader.decodeFromVideoElementContinuously(v, res => { if (res) found(res.getText()); });
+  } catch (e) { hint("Не получилось запустить сканер — сфотографируй штрихкод или введи цифры"); }
+}
+async function decodeBarcodeFile(file) {
+  try {
+    const img = await createImageBitmap(file);
+    const k = Math.min(1, 1400 / Math.max(img.width, img.height)), c = document.createElement("canvas");
+    c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+    if ("BarcodeDetector" in window) {
+      try { const r = await new BarcodeDetector({ formats: BAR_FORMATS }).detect(c); if (r[0]) return r[0].rawValue; } catch (e) {}
+    }
+    if (!window.ZXing) await loadScript(ZXING_URL);
+    const hints = new Map(); hints.set(ZXing.DecodeHintType.TRY_HARDER, true);
+    const res = await new ZXing.BrowserMultiFormatReader(hints).decodeFromImageUrl(c.toDataURL("image/jpeg", .92));
+    return res && res.getText();
+  } catch (e) { return null; }
+}
+async function lookupProduct(code) {
+  if (DEMO) return { code, name: "Йогурт греческий 2%", brand: "JLC", kcal: 66, p: 8.5, f: 2, c: 3.4, serving: 140, img: "" };
+  const fields = "product_name,product_name_ru,product_name_ro,brands,nutriments,serving_quantity,image_front_small_url,quantity";
+  const r = await fetch(`https://world.openfoodfacts.org/api/v2/product/${code}.json?fields=${fields}`);
+  const j = await r.json(); if (j.status !== 1 || !j.product) return null;
+  const P = j.product, n = P.nutriments || {};
+  const kcal = n["energy-kcal_100g"] ?? (n["energy_100g"] ? n["energy_100g"] / 4.184 : null);
+  return { code, name: P.product_name_ru || P.product_name || P.product_name_ro || "Товар " + code, brand: (P.brands || "").split(",")[0], qty: P.quantity || "",
+    kcal: kcal == null ? null : +kcal, p: +n.proteins_100g || 0, f: +n.fat_100g || 0, c: +n.carbohydrates_100g || 0,
+    serving: +P.serving_quantity || 100, img: P.image_front_small_url || "" };
+}
+async function findProduct(code) {
+  const st = $("#bar-st");
+  if (st) st.innerHTML = `<div style="display:flex;gap:10px;align-items:center"><div class="loader" style="padding:0"><i style="width:22px;height:22px;border-width:3px"></i></div>Ищу товар ${esc(code)}…</div>`;
+  let P = null; try { P = await lookupProduct(code); } catch (e) {}
+  if (!P) {
+    openSheet(`<div class="empty" style="margin-bottom:12px"><div class="e">📦</div>Товара ${esc(code)} пока нет в открытой базе продуктов.<br>Сфотографируй таблицу пищевой ценности на упаковке — прочитаю калории и БЖУ сам.</div>
+      <label class="fld"><span class="small">Сколько съел, г (необязательно)</span><input id="nf-g" type="number" inputmode="numeric" placeholder="100"></label>
+      <label class="btn" for="nf-photo">📷 Сфотографировать этикетку</label><input type="file" id="nf-photo" accept="image/*" capture="environment" hidden>
+      <div style="display:flex;gap:10px;margin-top:10px"><button class="btn ghost" id="nf-again" style="flex:1">Сканировать ещё</button><button class="btn ghost" id="nf-manual" style="flex:1">Ввести вручную</button></div>`);
+    $("#nf-photo").onchange = e => { const f = e.target.files && e.target.files[0]; if (!f) return; const g = +$("#nf-g").value || 0;
+      sendPhoto(f, `На фото упаковка или этикетка товара со штрихкодом ${code}. Прочитай название товара и пищевую ценность на 100 г с этикетки и посчитай на порцию ${g ? g + " г" : "100 г (если на упаковке указан вес порции — возьми его)"}.`); };
+    $("#nf-again").onclick = openBarcode; $("#nf-manual").onclick = openManual; return;
+  }
+  haptic("medium");
+  openSheet(`<div class="prod"><div class="pi">${P.img ? `<img src="${esc(P.img)}" alt="">` : "📦"}</div>
+      <div style="min-width:0"><div class="h1" style="font-size:20px;line-height:1.2">${esc(P.name)}</div><div class="small">${esc([P.brand, P.qty].filter(Boolean).join(", "))}</div><div class="small">штрихкод ${esc(code)}</div></div></div>
+    ${P.kcal == null ? `<div class="empty" style="margin-bottom:12px">В базе нет калорийности этого товара. Нажми «Записать» и введи её с упаковки.</div>` : `
+    <div class="small" style="margin-bottom:6px">На 100 г</div>
+    <div class="chips" style="margin-bottom:14px"><div class="chip">${fmt(P.kcal)} ккал</div><div class="chip" style="color:var(--p)">Б ${fmt1(P.p)}</div><div class="chip" style="color:#D9971A">Ж ${fmt1(P.f)}</div><div class="chip" style="color:var(--c)">У ${fmt1(P.c)}</div></div>`}
+    <label class="fld"><span class="small">Сколько съел, г</span><input id="pr-g" type="number" inputmode="numeric" value="${Math.round(P.serving)}"></label>
+    <div class="qg">${[50, 100, 150, 200, Math.round(P.serving)].filter((x, i, a) => a.indexOf(x) === i).map(g => `<button data-g="${g}">${g} г</button>`).join("")}</div>
+    <div class="card" style="display:flex;justify-content:space-between;align-items:center;margin:12px 0 14px"><div class="small">Будет записано</div><div class="big gtext" style="font-size:28px"><span id="pr-k">0</span> <span class="small">ккал</span></div></div>
+    <button class="btn" id="pr-add">Записать</button>
+    <button class="btn ghost" id="pr-again" style="margin-top:10px">Сканировать другой</button>`);
+  const calc = () => { const g = +$("#pr-g").value || 0, q = g / 100; return { name: P.name, grams: g, calories: Math.round((P.kcal || 0) * q), protein: +(P.p * q).toFixed(1), fat: +(P.f * q).toFixed(1), carbs: +(P.c * q).toFixed(1), photo_url: P.img || null }; };
+  const upd = () => $("#pr-k").textContent = fmt(calc().calories); $("#pr-g").oninput = upd; upd();
+  $("#sheet").onclick = e => { const b = e.target.closest("[data-g]"); if (b) { $("#pr-g").value = b.dataset.g; upd(); haptic(); } };
+  $("#pr-again").onclick = openBarcode;
+  $("#pr-add").onclick = () => { if (P.kcal == null) { closeSheet(); openManual(); $("#a-name").value = P.name; return; } addFood([calc()]); };
+}
 
 /* ================= ДНЕВНИК ================= */
 function renderDiary() {
